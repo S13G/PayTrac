@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "estate/wsgi.py",
+      "src": "paytrac/wsgi.py",
       "use": "@vercel/python",
       "config": {
         "runtime": "python3.9",
@@ -19,12 +19,12 @@
   ],
   "routes": [
     {
-      "src": "/static/(.*)",
-      "dest": "/static/$1"
+      "src": "/(.*)",
+      "dest": "/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/estate/wsgi.py"
+      "dest": "/paytrac/wsgi.py"
     }
   ]
 }

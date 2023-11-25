@@ -11,7 +11,7 @@ from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenBlacklistSerializer, \
-    TokenRefreshSerializer
+    TokenRefreshSerializer, TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenBlacklistView, TokenRefreshView
 
 from apps.common.errors import ErrorCode
@@ -19,7 +19,7 @@ from apps.common.exceptions import RequestError
 from apps.common.permissions import IsAuthenticatedAgent, IsAuthenticatedUser
 from apps.common.responses import CustomResponse
 from apps.core.emails import send_otp_email
-from apps.core.models import OTPSecret, Profile, AgentProfile
+from apps.core.models import OTPSecret
 from apps.core.serializers import *
 from utilities.encryption import decrypt_token_to_profile, encrypt_profile_to_token
 
@@ -38,11 +38,8 @@ class RegistrationView(APIView):
     @extend_schema(
         summary="Register user account",
         description=(
-                "This endpoint allows a user to register a user account. "
-                "Make sure you send 'is_agent' as `true` in your request when you want to create an agent profile. "
-                "If `is_agent` is set to `true`, an agent profile is automatically created. "
-                "Otherwise, a normal user profile is created.\n\n"
-                "**Note:** If the user already has an existing profile, an error message indicating the kind of profile is already in use will be displayed."
+                "This endpoint allows a user to register a business account. "
+                "**Note:** If the user already has an existing profile, an error message will be displayed."
                 "**Note: If the user wants to create another kind of account, send the same details including the same entered password details**"
         ),
         tags=['Registration'],
@@ -59,35 +56,18 @@ class RegistrationView(APIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-
-        is_agent = request.data.get('is_agent', False)
         validated_data = serializer.validated_data
-        validated_data['is_active'] = True
         email = validated_data['email']
 
         # Check if user exists
         try:
-            user = User.objects.get(email=email)
+            User.objects.get(email=email)
         except User.DoesNotExist:
-            # User doesn't exist, so create the requested profile
-            user = User.objects.create_user(**validated_data)
-            profile_model = AgentProfile if is_agent else Profile
-            profile_model.objects.create(user=user)
-            profile_type = "Agent" if is_agent else "Normal"
-            return CustomResponse.success(message=f"{profile_type} profile registered successfully",
+            User.objects.create_user(**validated_data)
+            return CustomResponse.success(message="Business account registered successfully",
                                           status_code=status.HTTP_201_CREATED)
 
-        # User exists, so check if the requested profile type already exists for the user
-        profile_model = AgentProfile if is_agent else Profile
-        profile_type = "Agent" if is_agent else "Normal"
-        try:
-            profile_model.objects.select_related('user').get(user=user)
-        except profile_model.DoesNotExist:
-            profile_model.objects.create(user=user)
-            return CustomResponse.success(message=f"{profile_type} profile registered successfully",
-                                          status_code=status.HTTP_201_CREATED)
-
-        raise RequestError(err_code=ErrorCode.ALREADY_EXISTS, err_msg=f"{profile_type} profile already exists",
+        raise RequestError(err_code=ErrorCode.ALREADY_EXISTS, err_msg="Account with this email already exists",
                            status_code=status.HTTP_409_CONFLICT)
 
 
@@ -202,121 +182,21 @@ class ResendEmailVerificationCodeView(APIView):
         return CustomResponse.success("Verification code sent successfully. Please check your mail")
 
 
-class SendNewEmailVerificationCodeView(APIView):
-    serializer_class = SendNewEmailVerificationCodeSerializer
-
-    @extend_schema(
-        summary="Send email change verification code",
-        description=
-        """
-        This endpoint allows an authenticated user to send a verification code to new email they want to change to.
-        The request should include the following data:
-
-        - `email_address`: The user's new email address.
-        """,
-        tags=['Email Change'],
-        responses={
-            status.HTTP_200_OK: OpenApiResponse(
-                description="Verification code sent successfully. Please check your new email.",
-            ),
-            status.HTTP_409_CONFLICT: OpenApiResponse(
-                description="Account with this email already exists"
-            )
-        }
-    )
-    def post(self, request):
-        serializer = self.serializer_class(data=self.request.data)
-        serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data.get('email')
-
-        existing_user = User.objects.filter(email=email).exists()
-
-        if existing_user:
-            raise RequestError(err_code=ErrorCode.ALREADY_EXISTS, err_msg="Account with this email already exists",
-                               status_code=status.HTTP_409_CONFLICT)
-        else:
-            send_otp_email(self.request.user, email, template="email_change.html")
-        return CustomResponse.success("Verification code sent successfully. Please check your mail")
-
-
-class ChangeEmailView(APIView):
-    permission_classes = (IsAuthenticated,)
-    serializer_class = ChangeEmailSerializer
-
-    @extend_schema(
-        summary="Change account email address",
-        description=
-        """
-        This endpoint allows an authenticated user to change their account's email address and user can change after 10 days.
-        The request should include the following data:
-
-        - `email_address`: The user's new email address.
-        - `otp`: The code sent
-        """,
-        tags=['Email Change'],
-        responses={
-            status.HTTP_200_OK: OpenApiResponse(
-                description="Email changed successfully.",
-            ),
-            status.HTTP_409_CONFLICT: OpenApiResponse(
-                description="You can't use your previous email"
-            ),
-            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="OTP Error"
-            ),
-        }
-    )
-    @transaction.atomic()
-    def post(self, request):
-        serializer = self.serializer_class(data=self.request.data)
-        serializer.is_valid(raise_exception=True)
-        new_email = serializer.validated_data.get('email')
-        code = self.request.data.get('code')
-        user = self.request.user
-
-        if user.email == new_email:
-            raise RequestError(err_code=ErrorCode.OLD_EMAIL, err_msg="You can't use your previous email", )
-        elif not code or not user.otp_secret:
-            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="No OTP found for this account",
-                               status_code=status.HTTP_404_NOT_FOUND)
-
-        # Check if the OTP secret has expired (10 minutes interval)
-        current_time = timezone.now()
-        expiration_time = user.otp_secret.created + timedelta(minutes=10)
-        if current_time > expiration_time:
-            raise RequestError(err_code=ErrorCode.EXPIRED_OTP, err_msg="OTP has expired",
-                               status_code=status.HTTP_400_BAD_REQUEST)
-
-        # Verify the OTP
-        totp = pyotp.TOTP(user.otp_secret.secret, interval=600)
-        if not totp.verify(code):
-            raise RequestError(err_code=ErrorCode.INCORRECT_OTP, err_msg="Invalid OTP",
-                               status_code=status.HTTP_400_BAD_REQUEST)
-
-        user.email = new_email
-        user.email_changed = True
-        user.save()
-        user.otp_secret.delete()
-
-        return CustomResponse.success(message="Email changed successfully.")
-
-
-class UserLoginView(TokenObtainPairView):
-    serializer_class = JWTSerializer
+class LoginView(TokenObtainPairView):
+    serializer_class = TokenObtainPairSerializer
     throttle_classes = [AnonRateThrottle]
 
     @extend_schema(
         summary="Login",
         description="""
         This endpoint authenticates a registered and verified user and provides the necessary authentication tokens.
-        Make sure you don't send "is_agent" to this endpoint.
         """,
         request=LoginSerializer,
         tags=['Profile Authentication'],
         responses={
             status.HTTP_200_OK: OpenApiResponse(
                 description="Logged in successfully",
-                response=ProfileSerializer,
+                response=BusinessUserSerializer,
             ),
             status.HTTP_400_BAD_REQUEST: OpenApiResponse(
                 description="Account not active or Invalid credentials",
@@ -340,15 +220,10 @@ class UserLoginView(TokenObtainPairView):
             raise RequestError(err_code=ErrorCode.UNVERIFIED_USER, err_msg="Verify your email first",
                                status_code=status.HTTP_400_BAD_REQUEST)
 
-        user.is_agent = False
-        tokens_response = JWTSerializer.get_token(user)
-        tokens = {"refresh": str(tokens_response), "access": str(tokens_response.access_token)}
+        token_response = super().post(request)
+        tokens = token_response.data
 
-        if not Profile.objects.select_related('user').filter(user=user).exists():
-            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="You don't have a normal profile",
-                               status_code=status.HTTP_404_NOT_FOUND)
-
-        profile_serializer = ProfileSerializer(user.user_profile, context={"request": request})
+        profile_serializer = BusinessUserSerializer(user, context={"request": request})
         response_data = {"tokens": tokens, "profile_data": profile_serializer.data}
         return CustomResponse.success(message="Normal profile logged in successfully", data=response_data)
 

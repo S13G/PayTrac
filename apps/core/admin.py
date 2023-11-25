@@ -19,27 +19,18 @@ class GroupAdmin(BaseGroupAdmin):
 
 class UserAdmin(BaseUserAdmin):
     list_display = (
-        "first_name",
-        "last_name",
-        "phone_number",
-        "coins_available",
+        "full_name",
         "email",
-        "email_changed",
         "email_verified",
         "is_staff",
         "is_active",
 
     )
     list_display_links = (
-        "first_name",
-        "last_name",
-        "phone_number",
+        "full_name",
         "email",
     )
     list_filter = (
-        "first_name",
-        "last_name",
-        "email",
         "is_staff",
         "is_active",
     )
@@ -58,11 +49,9 @@ class UserAdmin(BaseUserAdmin):
             "Personal Information",
             {
                 "fields": (
-                    "first_name",
-                    "last_name",
-                    "phone_number",
+                    "full_name",
+                    "email",
                     "avatar",
-                    "coins_available",
                 )
             },
         ),
@@ -95,11 +84,9 @@ class UserAdmin(BaseUserAdmin):
             {
                 "classes": ("wide",),
                 "fields": (
-                    "first_name",
-                    "last_name",
-                    "phone_number",
+                    "full_name",
                     "email",
-                    "coins_available",
+                    "avatar",
                     "password1",
                     "password2",
                     "is_staff",
@@ -109,17 +96,27 @@ class UserAdmin(BaseUserAdmin):
         ),
     )
     readonly_fields = ("created", "updated",)
-    search_fields = ("email", "first_name", "last_name", "phone_number",)
-    ordering = ("email", "first_name", "last_name",)
+    search_fields = ("email", "full_name",)
+    ordering = ("email", "full_name",)
 
 
-@admin.register(Profile)
-class ProfileAdmin(admin.ModelAdmin):
+@admin.register(ClientProfile)
+class ClientProfileAdmin(admin.ModelAdmin):
     fieldsets = [
         (
             'Profile Information', {
                 'fields': [
-                    "user",
+                    "business_profile",
+                    'full_name',
+                    'business_name',
+                    'avatar',
+                    'email',
+                    'phone_number',
+                    'billing_address',
+                    'country',
+                    'state',
+                    'zip_code',
+                    'is_verified',
                 ],
             }
         ),
@@ -127,64 +124,25 @@ class ProfileAdmin(admin.ModelAdmin):
     list_display = (
         'full_name',
         "phone_number",
+        "email",
+        "country",
         'created',
         'updated',
     )
     list_per_page = 20
-    search_fields = (
-        "full_name",
-        "phone_number",
-    )
-
-    @admin.display(description='Phone number')
-    def phone_number(self, obj):
-        return obj.user.phone_number
-
-
-@admin.register(AgentProfile)
-class AgentProfileAdmin(admin.ModelAdmin):
-    fieldsets = [
-        (
-            'Profile Information', {
-                'fields': [
-                    "user",
-                    'date_of_birth',
-                    'occupation',
-                    'address',
-                ],
-            }
-        ),
-    ]
-    list_display = (
-        "full_name",
-        "phone_number",
-        "phone_number",
-        'date_of_birth',
-        'occupation',
-        'created',
-        'updated',
-    )
     list_filter = (
-        'date_of_birth',
-        'occupation',
+        'is_verified'
     )
-    list_per_page = 20
     search_fields = (
         "full_name",
         "phone_number",
-        'occupation',
-        'address',
-        'date_of_birth',
+        'email',
+        'country',
+        'state',
+        'zip_code',
+        'billing_address',
+        'business_name',
     )
-    ordering = (
-        'date_of_birth',
-        'occupation',
-    )
-
-    @admin.display(description='Phone number')
-    def phone_number(self, obj):
-        return obj.user.phone_number
-
 
 admin.site.register(User, UserAdmin)
 admin.site.register(Group, GroupAdmin)

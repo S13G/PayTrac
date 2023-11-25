@@ -105,7 +105,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "ESTATE API",
+    "TITLE": "PAYTRAC API",
     "DESCRIPTION": """""",
     "VERSION": "1.0.0",
     "CONTACT": "lookouttest91@zohomail.com",
@@ -121,12 +121,19 @@ INTERNAL_IPS = [
 SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
     "ACCESS_TOKEN_LIFETIME": timedelta(days=5),
-    "TOKEN_OBTAIN_SERIALIZER": "apps.core.serializers.JWTSerializer",
-
 }
 
 ROOT_URLCONF = 'paytrac.urls'
+class SendNewEmailVerificationCodeSerializer(sr.Serializer):
+    email = sr.CharField()
 
+    @staticmethod
+    def validate_email(value):
+        try:
+            validate_email(value)
+        except sr.ValidationError:
+            raise sr.ValidationError("Invalid email address.")
+        return value
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -206,7 +213,7 @@ STATIC_URL = "static/"
 
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles", "static")
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 STORAGES = {
     "default": {
@@ -361,24 +368,6 @@ FW_KEY = config("FLUTTERWAVE_SECRET_KEY")
 FW_PUBLIC_KEY = config("FLUTTERWAVE_PUBLIC_KEY")
 
 FW_VERIFY_LINK = config("FW_VERIFY_LINK")
-
-# LOGGING for speed
-# LOGGING = {
-#     'version': 1,
-#     'handlers': {
-#         'console': {
-#             'class': 'logging.StreamHandler',
-#         },
-#     },
-#     'loggers': {
-#         'django.db.backends': {
-#             'level': 'DEBUG',
-#         },
-#     },
-#     'root': {
-#         'handlers': ['console'],
-#     }
-# }
 
 # database active connection minutes
 CONN_MAX_AGE = 300
