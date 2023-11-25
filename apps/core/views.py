@@ -16,7 +16,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenBlacklistVi
 
 from apps.common.errors import ErrorCode
 from apps.common.exceptions import RequestError
-from apps.common.permissions import IsAuthenticatedAgent, IsAuthenticatedUser
 from apps.common.responses import CustomResponse
 from apps.core.emails import send_otp_email
 from apps.core.models import OTPSecret
@@ -225,59 +224,7 @@ class LoginView(TokenObtainPairView):
 
         profile_serializer = BusinessUserSerializer(user, context={"request": request})
         response_data = {"tokens": tokens, "profile_data": profile_serializer.data}
-        return CustomResponse.success(message="Normal profile logged in successfully", data=response_data)
-
-
-class AgentLoginView(TokenObtainPairView):
-    serializer_class = AgentProfileSerializer
-    throttle_classes = [AnonRateThrottle]
-
-    @extend_schema(
-        summary="Login",
-        description="""
-        This endpoint authenticates a registered and verified user and provides the necessary authentication tokens.
-        "is_agent" is True by default and it's been sent to the endpoint
-        """,
-        request=LoginSerializer,
-        tags=['Agent Authentication'],
-        responses={
-            status.HTTP_200_OK: OpenApiResponse(
-                description="Logged in successfully",
-                response=ProfileSerializer,
-            ),
-            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Account not active or Invalid credentials",
-            ),
-        }
-    )
-    def post(self, request):
-        serializer = LoginSerializer(data=self.request.data)
-        serializer.is_valid(raise_exception=True)
-        validated_data = serializer.validated_data
-        email = validated_data["email"]
-        password = validated_data["password"]
-
-        user = authenticate(request, email=email, password=password)
-
-        if not user:
-            raise RequestError(err_code=ErrorCode.INVALID_CREDENTIALS, err_msg="Invalid credentials",
-                               status_code=status.HTTP_400_BAD_REQUEST)
-
-        if not user.email_verified:
-            raise RequestError(err_code=ErrorCode.UNVERIFIED_USER, err_msg="Verify your email first",
-                               status_code=status.HTTP_400_BAD_REQUEST)
-
-        user.is_agent = True
-        tokens_response = JWTSerializer.get_token(user)
-        tokens = {"refresh": str(tokens_response), "access": str(tokens_response.access_token)}
-
-        if not AgentProfile.objects.select_related('user').filter(user=user).exists():
-            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="You don't have an agent profile",
-                               status_code=status.HTTP_404_NOT_FOUND)
-
-        profile_serializer = self.serializer_class(user.agent_profile, context={"request": request})
-        response_data = {"tokens": tokens, "profile_data": profile_serializer.data}
-        return CustomResponse.success(message="Agent profile logged in successfully", data=response_data)
+        return CustomResponse.success(message="Logged in successfully", data=response_data)
 
 
 class LogoutView(TokenBlacklistView):
@@ -341,7 +288,7 @@ class RefreshView(TokenRefreshView):
 
 
 class RequestForgotPasswordCodeView(APIView):
-    serializer_class = RequestNewPasswordCodeSerializer
+    serializer_class = ResendEmailVerificationCodeSerializer
     throttle_classes = [AnonRateThrottle]
 
     @extend_schema(
@@ -526,22 +473,17 @@ class ChangePasswordView(APIView):
         return CustomResponse.success(message="Password updated successfully")
 
 
-"""
-NORMAL PROFILE
-"""
-
-
 class RetrieveUpdateDeleteProfileView(APIView):
-    permission_classes = (IsAuthenticatedUser,)
-    serializer_class = ProfileSerializer
+    permission_classes = (IsAuthenticated,)
+    serializer_class = BusinessUserSerializer
 
     @extend_schema(
         summary="Retrieve user profile",
         description=
         """
-        This endpoint allows a user to retrieve his/her normal profile.
+        This endpoint allows a user to retrieve his/her profile.
         """,
-        tags=['Normal Profile'],
+        tags=['Profile'],
         responses={
             status.HTTP_400_BAD_REQUEST: OpenApiResponse(
                 description="Provide a profile id"
@@ -553,12 +495,10 @@ class RetrieveUpdateDeleteProfileView(APIView):
     )
     def get(self, request):
         user = self.request.user
-        try:
-            user_profile = Profile.objects.select_related('user').get(user=user)
-        except Profile.DoesNotExist:
-            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="No profile found for this user",
+        if not user:
+            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="User doesn't exist",
                                status_code=status.HTTP_404_NOT_FOUND)
-        serialized_data = ProfileSerializer(user_profile, context={"request": request}).data
+        serialized_data = self.serializer_class(user, context={"request": request}).data
         return CustomResponse.success(message="Retrieved profile successfully", data=serialized_data)
 
     @extend_schema(
@@ -567,11 +507,8 @@ class RetrieveUpdateDeleteProfileView(APIView):
         """
         This endpoint allows a user to update his/her user profile.
         """,
-        tags=['Normal Profile'],
+        tags=['Profile'],
         responses={
-            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Provide a profile id"
-            ),
             status.HTTP_202_ACCEPTED: OpenApiResponse(
                 description="Updated successfully"
             )
@@ -580,9 +517,11 @@ class RetrieveUpdateDeleteProfileView(APIView):
     @transaction.atomic()
     def patch(self, request):
         user = self.request.user
-        user_profile = Profile.objects.select_related('user').get(user=user)
-        update_profile = self.serializer_class(user_profile, data=self.request.data, partial=True,
-                                               context={"request": request})
+        if not user:
+            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="User doesn't exist",
+                               status_code=status.HTTP_404_NOT_FOUND)
+
+        update_profile = self.serializer_class(user, data=self.request.data, partial=True, context={"request": request})
 
         update_profile.is_valid(raise_exception=True)
         updated = self.serializer_class(update_profile.save()).data
@@ -593,13 +532,10 @@ class RetrieveUpdateDeleteProfileView(APIView):
         summary="Delete user profile",
         description=
         """
-        This endpoint allows a user to delete his/her user profile.
+        This endpoint allows a user to delete his/her profile.
         """,
-        tags=['Normal Profile'],
+        tags=['Profile'],
         responses={
-            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Provide a profile id"
-            ),
             status.HTTP_200_OK: OpenApiResponse(
                 description="Deleted successfully"
             )
@@ -607,91 +543,9 @@ class RetrieveUpdateDeleteProfileView(APIView):
     )
     def delete(self, request):
         user = self.request.user
-        Profile.objects.select_related('user').get(user=user).delete()
-        return CustomResponse.success(message="Deleted successfully")
-
-
-"""
-AGENT PROFILE
-"""
-
-
-class RetrieveUpdateDeleteAgentProfileView(APIView):
-    permission_classes = (IsAuthenticatedAgent,)
-    serializer_class = AgentProfileSerializer
-
-    @extend_schema(
-        summary="Retrieve agent profile",
-        description=
-        """
-        This endpoint allows a user to retrieve his/her agent profile.
-        """,
-        tags=['Agent Profile'],
-        responses={
-            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Provide a profile id"
-            ),
-            status.HTTP_200_OK: OpenApiResponse(
-                description="Fetched successfully"
-            )
-        }
-    )
-    def get(self, request):
-        user = self.request.user
-        try:
-            agent_profile = AgentProfile.objects.select_related('user').get(user=user)
-        except AgentProfile.DoesNotExist:
-            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="No profile found for this user",
+        if not user:
+            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="User doesn't exist",
                                status_code=status.HTTP_404_NOT_FOUND)
 
-        serialized_data = self.serializer_class(agent_profile, context={"request": request}).data
-        return CustomResponse.success(message="Retrieved profile successfully", data=serialized_data)
-
-    @extend_schema(
-        summary="Update agent profile",
-        description=
-        """
-        This endpoint allows a user to update his/her agent profile.
-        """,
-        tags=['Agent Profile'],
-        responses={
-            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Provide a profile id"
-            ),
-            status.HTTP_202_ACCEPTED: OpenApiResponse(
-                description="Updated successfully"
-            )
-        }
-    )
-    @transaction.atomic()
-    def patch(self, request):
-        user = self.request.user
-        agent_profile = AgentProfile.objects.select_related('user').get(user=user)
-        update_profile = self.serializer_class(agent_profile, data=self.request.data, partial=True,
-                                               context={"request": request})
-
-        update_profile.is_valid(raise_exception=True)
-        updated = self.serializer_class(update_profile.save()).data
-        return CustomResponse.success(message="Updated profile successfully", data=updated,
-                                      status_code=status.HTTP_202_ACCEPTED)
-
-    @extend_schema(
-        summary="Delete agent profile",
-        description=
-        """
-        This endpoint allows a user to delete his/her agent profile.
-        """,
-        tags=['Agent Profile'],
-        responses={
-            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
-                description="Provide a profile id"
-            ),
-            status.HTTP_200_OK: OpenApiResponse(
-                description="Deleted successfully"
-            )
-        }
-    )
-    def delete(self, request):
-        user = self.request.user
-        AgentProfile.objects.select_related('user').get(user=user).delete()
+        user.delete()
         return CustomResponse.success(message="Deleted successfully")
