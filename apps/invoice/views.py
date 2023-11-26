@@ -8,7 +8,7 @@ from apps.common.errors import ErrorCode
 from apps.common.exceptions import RequestError
 from apps.common.responses import CustomResponse
 from apps.core.models import ClientProfile
-from apps.invoice.models import Invoice
+from apps.invoice.models import Invoice, InvoiceItem
 from apps.invoice.serializers import InvoiceSerializer
 from apps.notification.models import Notification
 
@@ -181,13 +181,28 @@ class CreateInvoiceView(APIView):
                                status_code=status.HTTP_400_BAD_REQUEST)
 
         try:
-            client = ClientProfile.objects.get(id=client_id, business_owner=user)
+            client = ClientProfile.objects.get(id=client_id, business_profile=user)
         except ClientProfile.DoesNotExist:
             raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="Client profile not found",
                                status_code=status.HTTP_404_NOT_FOUND)
 
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        Invoice.objects.create(business_owner=user, client=client, **serializer.validated_data)
+
+        # Extract the 'items' data from the validated_data
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+
+        items_data = validated_data.pop('items', [])
+
+        # Create the invoice
+        invoice = Invoice.objects.create(business_owner=user, client=client, **validated_data)
+
+        # Create associated items using bulk_create
+        items_instances = [InvoiceItem(invoice=invoice, **item) for item in items_data]
+        InvoiceItem.objects.bulk_create(items_instances)
+
+        serialized_data = self.serializer_class(invoice).data
         Notification.objects.create(title=f"You have created an invoice for {client.full_name}", user=user)
-        return CustomResponse.success(message="Created successfully")
+        return CustomResponse.success(message="Created successfully", data=serialized_data,
+                                      status_code=status.HTTP_201_CREATED)

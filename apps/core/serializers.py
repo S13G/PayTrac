@@ -72,7 +72,6 @@ class BusinessUserSerializer(sr.Serializer):
 
 
 class ClientProfileSerializer(sr.Serializer):
-    business_profile = BusinessUserSerializer(read_only=True)
     id = sr.UUIDField(read_only=True)
     full_name = sr.CharField()
     business_name = sr.CharField()
