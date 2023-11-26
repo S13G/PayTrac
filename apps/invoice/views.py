@@ -34,7 +34,7 @@ class RetrieveAllInvoicesView(APIView):
     )
     def get(self, request):
         user = self.request.user
-        invoices = user.invoices.all()
+        invoices = user.business_invoices.all()
         serialized_data = self.serializer_class(invoices, many=True).data
         return CustomResponse.success(message="Successfully retrieved all invoices", data=serialized_data)
 
@@ -161,7 +161,7 @@ class CreateInvoiceView(APIView):
         ),
         tags=['Invoice'],
         responses={
-            status.HTTP_200_OK: OpenApiResponse(
+            status.HTTP_201_CREATED: OpenApiResponse(
                 description="Created successfully"
             ),
             status.HTTP_400_BAD_REQUEST: OpenApiResponse(
@@ -202,7 +202,8 @@ class CreateInvoiceView(APIView):
         items_instances = [InvoiceItem(invoice=invoice, **item) for item in items_data]
         InvoiceItem.objects.bulk_create(items_instances)
 
-        serialized_data = self.serializer_class(invoice).data
         Notification.objects.create(title=f"You have created an invoice for {client.full_name}", user=user)
+
+        serialized_data = self.serializer_class(invoice).data
         return CustomResponse.success(message="Created successfully", data=serialized_data,
                                       status_code=status.HTTP_201_CREATED)
