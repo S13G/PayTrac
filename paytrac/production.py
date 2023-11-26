@@ -1,3 +1,5 @@
+import dj_database_url
+
 from .settings import *
 
 CLOUDINARY_STORAGE = {
@@ -24,14 +26,11 @@ CHANNEL_LAYERS = {
 }
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'railway',
-        'USER': 'postgres',
-        'PASSWORD': config('DB_PASS'),
-        'HOST': 'viaduct.proxy.rlwy.net',
-        'PORT': '39724',
-    }
+    'default': dj_database_url.config(
+            default=config("DATABASE_URL"),
+            conn_max_age=300,
+            conn_health_checks=True,
+    )
 }
 
 INSTALLED_APPS.remove("debug_toolbar")

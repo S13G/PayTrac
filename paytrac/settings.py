@@ -43,6 +43,7 @@ DJANGO_APPS = [
 LOCAL_APPS = [
     'apps.core.apps.CoreConfig',
     'apps.common.apps.CommonConfig',
+    'apps.invoice.apps.InvoiceConfig',
 ]
 
 THIRD_PARTY_APPS = [
@@ -76,7 +77,7 @@ REST_FRAMEWORK = {
     ),
     "COERCE_DECIMAL_TO_STRING": False,
     "DEFAULT_PAGINATION_CLASS": "apps.common.paginator.CustomPagination",
-    "EXCEPTION_HANDLER": "apps.common.exceptions.custom_exception_handler",
+    # "EXCEPTION_HANDLER": "apps.common.exceptions.custom_exception_handler",
     "PAGE_SIZE": 30,
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.AllowAny",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
@@ -124,16 +125,7 @@ SIMPLE_JWT = {
 }
 
 ROOT_URLCONF = 'paytrac.urls'
-class SendNewEmailVerificationCodeSerializer(sr.Serializer):
-    email = sr.CharField()
 
-    @staticmethod
-    def validate_email(value):
-        try:
-            validate_email(value)
-        except sr.ValidationError:
-            raise sr.ValidationError("Invalid email address.")
-        return value
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -306,9 +298,8 @@ JAZZMIN_SETTINGS = {
     "icons": {
         "core.group": "fas fa-users",
         "core.user": "fas fa-universal-access",
-        "core.profile": "fas fa-user",
-        "core.agentprofile": "far fa-user",
-        "notification.notification": "fas fa-bell",
+        "core.clientprofile": "far fa-user",
+        # "notification.notification": "fas fa-bell",
     },
     # Icons that are used when one is not manually specified
     "default_icon_parents": "fas fa-chevron-circle-right",

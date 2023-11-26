@@ -8,7 +8,7 @@ from django_countries.fields import CountryField
 
 from apps.common.models import BaseModel
 from apps.common.validators import validate_phone_number
-from apps.core.managers import CustomUserManager
+from apps.core.managers import CustomUserManager, ClientManager
 
 
 # Create your models here.
@@ -54,8 +54,10 @@ class ClientProfile(BaseModel):
     billing_address = models.CharField(max_length=255, null=True, blank=True)
     country = CountryField(null=True)
     state = models.CharField(max_length=255, null=True, blank=True)
-    zip_code = models.CharField(max_length=255, null=True, blank=True)
-    is_verified = models.BooleanField(default=False)
+    zip_code = models.PositiveIntegerField(null=True, blank=True)
+    is_verified = models.BooleanField(default=True)
+
+    objects = ClientManager()
 
     def __str__(self):
         return f"{self.business_profile.full_name} ---> {self.full_name}"

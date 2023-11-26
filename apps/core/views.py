@@ -2,7 +2,7 @@ from datetime import timedelta
 
 import pyotp
 from django.contrib.auth import authenticate
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
@@ -18,7 +18,7 @@ from apps.common.errors import ErrorCode
 from apps.common.exceptions import RequestError
 from apps.common.responses import CustomResponse
 from apps.core.emails import send_otp_email
-from apps.core.models import OTPSecret
+from apps.core.models import OTPSecret, ClientProfile
 from apps.core.serializers import *
 from utilities.encryption import decrypt_token_to_profile, encrypt_profile_to_token
 
@@ -549,3 +549,180 @@ class RetrieveUpdateDeleteProfileView(APIView):
 
         user.delete()
         return CustomResponse.success(message="Deleted successfully")
+
+
+"""
+CLIENT PROFILE
+"""
+
+
+class RetrieveUpdateDeleteClientProfileView(APIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ClientProfileSerializer
+
+    @extend_schema(
+        summary="Retrieve client profile",
+        description=(
+                "This endpoint allows a business owner to retrieve his/her client's profile."
+        ),
+        tags=['Client Profile'],
+        responses={
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+                description="Provide a client profile id"
+            ),
+            status.HTTP_200_OK: OpenApiResponse(
+                description="Fetched successfully"
+            ),
+            status.HTTP_404_NOT_FOUND: OpenApiResponse(
+                description="Client profile not found"
+            )
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        client_id = self.kwargs.get('client_id')
+        if not client_id:
+            raise RequestError(err_code=ErrorCode.INVALID_ENTRY, err_msg="Client profile id not provided",
+                               status_code=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+
+        try:
+            client = ClientProfile.objects.get(id=client_id, business_profile=user)
+        except ClientProfile.DoesNotExist:
+            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="Client profile not found",
+                               status_code=status.HTTP_404_NOT_FOUND)
+
+        serialized_data = self.serializer_class(client).data
+        return CustomResponse.success(message="Retrieved client profile successfully", data=serialized_data)
+
+    @extend_schema(
+        summary="Update client profile",
+        description=(
+                "This endpoint allows a business owner to update his/her client's profile."
+        ),
+        tags=['Client Profile'],
+        responses={
+            status.HTTP_202_ACCEPTED: OpenApiResponse(
+                description="Updated successfully"
+            ),
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+                description="Provide a client profile id"
+            ),
+            status.HTTP_404_NOT_FOUND: OpenApiResponse(
+                description="Client profile not found"
+            )
+        }
+    )
+    def patch(self, request, *args, **kwargs):
+        client_id = self.kwargs.get('client_id')
+        if not client_id:
+            raise RequestError(err_code=ErrorCode.INVALID_ENTRY, err_msg="Client profile id not provided",
+                               status_code=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+
+        try:
+            client = ClientProfile.objects.get(id=client_id, business_profile=user)
+        except ClientProfile.DoesNotExist:
+            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="Client profile not found",
+                               status_code=status.HTTP_404_NOT_FOUND)
+
+        updated_profile = self.serializer_class(client, data=self.request.data, partial=True)
+        updated_profile.is_valid(raise_exception=True)
+        updated_profile.save()
+        updated_serialized_data = self.serializer_class(client).data
+        return CustomResponse.success(message="Updated client profile successfully", data=updated_serialized_data,
+                                      status_code=status.HTTP_202_ACCEPTED)
+
+    @extend_schema(
+        summary="Delete client profile",
+        description=(
+                "This endpoint allows a business owner to delete his/her client's profile."
+        ),
+        tags=['Client Profile'],
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(
+                description="Deleted successfully"
+            ),
+            status.HTTP_404_NOT_FOUND: OpenApiResponse(
+                description="Client profile not found"
+            ),
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+                description="Provide a client profile id"
+            )
+        }
+    )
+    def delete(self, request, *args, **kwargs):
+        client_id = self.kwargs.get('client_id')
+        if not client_id:
+            raise RequestError(err_code=ErrorCode.INVALID_ENTRY, err_msg="Client profile id not provided",
+                               status_code=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+
+        try:
+            client = ClientProfile.objects.get(id=client_id, business_profile=user)
+        except ClientProfile.DoesNotExist:
+            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="Client profile not found",
+                               status_code=status.HTTP_404_NOT_FOUND)
+
+        client.delete()
+        return CustomResponse.success(message="Deleted client profile successfully")
+
+
+class RetrieveAllClientProfileView(APIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ClientProfileSerializer
+
+    @extend_schema(
+        summary="Retrieve all client profiles",
+        description=(
+                "This endpoint allows a business owner to retrieve all his/her client's profiles."
+        ),
+        tags=['Client Profile'],
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(
+                description="Fetched successfully"
+            ),
+        }
+    )
+    def get(self, request):
+        user = request.user
+        all_clients = user.business_clients.all()
+        serialized_data = self.serializer_class(all_clients, many=True).data
+        return CustomResponse.success(message="Retrieved all client profiles successfully", data=serialized_data)
+
+
+class CreateClientProfileView(APIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = RegisterClientSerializer
+
+    @extend_schema(
+        summary="Add client profile",
+        description=(
+                "This endpoint allows a business owner to add his/her client's profile."
+        ),
+        tags=['Client Profile'],
+        responses={
+            status.HTTP_201_CREATED: OpenApiResponse(
+                description="Created successfully"
+            ),
+            status.HTTP_409_CONFLICT: OpenApiResponse(
+                description="Client profile already exists for this business"
+            )
+        }
+    )
+    @transaction.atomic
+    def post(self, request):
+        user = request.user
+        if not user:
+            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="Business account not found",
+                               status_code=status.HTTP_404_NOT_FOUND)
+        serializer = self.serializer_class(data=self.request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            client_profile = ClientProfile.objects.create(business_profile=user, **serializer.validated_data)
+        except IntegrityError:
+            raise RequestError(err_code=ErrorCode.ALREADY_EXISTS, err_msg="Client profile already exists",
+                               status_code=status.HTTP_409_CONFLICT)
+
+        serialized_data = ClientProfileSerializer(client_profile, context={"request": request}).data
+        return CustomResponse.success(message="Created client profile successfully", data=serialized_data,
+                                      status_code=status.HTTP_201_CREATED)

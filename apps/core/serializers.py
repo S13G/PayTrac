@@ -52,7 +52,7 @@ class BusinessUserSerializer(sr.Serializer):
     full_name = sr.CharField()
     email = sr.EmailField(read_only=True)
     avatar = sr.ImageField()
-    email_verified = sr.BooleanField()
+    email_verified = sr.BooleanField(read_only=True)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -83,7 +83,7 @@ class ClientProfileSerializer(sr.Serializer):
     country = CountryField(name_only=True)
     state = sr.CharField()
     zip_code = sr.CharField()
-    is_verified = sr.BooleanField()
+    is_verified = sr.BooleanField(read_only=True)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -95,6 +95,8 @@ class ClientProfileSerializer(sr.Serializer):
         return data
 
     def update(self, instance, validated_data):
+        print(validated_data)
+        print(instance)
         for key, value in validated_data.items():
             setattr(instance, key, value)
 
@@ -126,3 +128,15 @@ class ChangePasswordSerializer(sr.Serializer):
         if confirm != password:
             raise sr.ValidationError({"confirm_pass": "Passwords do not match"})
         return attrs
+
+
+class RegisterClientSerializer(sr.Serializer):
+    full_name = sr.CharField()
+    business_name = sr.CharField(allow_blank=True, allow_null=True, required=False)
+    avatar = sr.ImageField(allow_null=True, allow_empty_file=True, required=False)
+    email = sr.CharField()
+    phone_number = sr.CharField()
+    billing_address = sr.CharField(allow_null=True, allow_blank=True, required=False)
+    country = CountryField(name_only=True)
+    state = sr.CharField(allow_null=True, allow_blank=True, required=False)
+    zip_code = sr.IntegerField(allow_null=True, required=False)

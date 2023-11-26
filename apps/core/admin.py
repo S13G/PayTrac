@@ -50,7 +50,6 @@ class UserAdmin(BaseUserAdmin):
             {
                 "fields": (
                     "full_name",
-                    "email",
                     "avatar",
                 )
             },
@@ -131,7 +130,7 @@ class ClientProfileAdmin(admin.ModelAdmin):
     )
     list_per_page = 20
     list_filter = (
-        'is_verified'
+        'is_verified',
     )
     search_fields = (
         "full_name",
@@ -143,6 +142,7 @@ class ClientProfileAdmin(admin.ModelAdmin):
         'billing_address',
         'business_name',
     )
+
 
 admin.site.register(User, UserAdmin)
 admin.site.register(Group, GroupAdmin)

@@ -1,6 +1,7 @@
 from django.contrib.auth.base_user import BaseUserManager
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
@@ -49,7 +50,6 @@ class CustomUserManager(BaseUserManager):
         return user
 
     def create_user(self, full_name, email=None, password=None, **extra_fields):
-        self.validate_user(full_name, email)
         extra_fields.setdefault("is_active", True)
         extra_fields.setdefault("is_staff", False)
         extra_fields.setdefault("is_superuser", False)
@@ -59,3 +59,8 @@ class CustomUserManager(BaseUserManager):
         extra_fields = self.validate_superuser(email, password, **extra_fields)
         user = self._create_user(full_name, email, password, **extra_fields)
         return user
+
+
+class ClientManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().select_related("business_profile")
