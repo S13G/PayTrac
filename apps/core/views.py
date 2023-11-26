@@ -20,6 +20,7 @@ from apps.common.responses import CustomResponse
 from apps.core.emails import send_otp_email
 from apps.core.models import OTPSecret, ClientProfile
 from apps.core.serializers import *
+from apps.notification.models import Notification
 from utilities.encryption import decrypt_token_to_profile, encrypt_profile_to_token
 
 User = get_user_model()
@@ -719,6 +720,7 @@ class CreateClientProfileView(APIView):
         serializer.is_valid(raise_exception=True)
         try:
             client_profile = ClientProfile.objects.create(business_profile=user, **serializer.validated_data)
+            Notification.objects.create(title="You have created a client profile", user=user)
         except IntegrityError:
             raise RequestError(err_code=ErrorCode.ALREADY_EXISTS, err_msg="Client profile already exists",
                                status_code=status.HTTP_409_CONFLICT)

@@ -44,6 +44,7 @@ LOCAL_APPS = [
     'apps.core.apps.CoreConfig',
     'apps.common.apps.CommonConfig',
     'apps.invoice.apps.InvoiceConfig',
+    'apps.notification.apps.NotificationConfig'
 ]
 
 THIRD_PARTY_APPS = [
@@ -246,13 +247,13 @@ JAZZMIN_SETTINGS = {
     # Title on the login screen (19 chars max) (defaults to current_admin_site.site_header if absent or None)
     "site_header": "paytrac",
     # Logo to use for your site, must be present in static files, used for brand on top left
-    "site_logo": "../static/logo.png",
+    "site_logo": "../static/svg.png",
     # Logo to use for your site, must be present in static files, used for login form logo (defaults to site_logo)
-    "login_logo": "../static/logo.png",
+    "login_logo": "../static/svg.png",
     # CSS classes that are applied to the logo above
     "site_logo_classes": "img-circle",
     # Relative path to a favicon for your site, will default to site_logo if absent (ideally 32x32 px)
-    "site_icon": "../static/logo.png",
+    "site_icon": "../static/svg.png",
     # Welcome text on the login screen
     "welcome_sign": "Welcome to the paytrac Admin Section",
     # Copyright on the footer
@@ -299,7 +300,7 @@ JAZZMIN_SETTINGS = {
         "core.group": "fas fa-users",
         "core.user": "fas fa-universal-access",
         "core.clientprofile": "far fa-user",
-        # "notification.notification": "fas fa-bell",
+        "notification.notification": "fas fa-bell",
     },
     # Icons that are used when one is not manually specified
     "default_icon_parents": "fas fa-chevron-circle-right",
