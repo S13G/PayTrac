@@ -19,7 +19,7 @@ class InvoiceSerializer(sr.Serializer):
     issued_on = sr.DateTimeField()
     due_on = sr.DateTimeField()
     comment = sr.CharField()
-    total_price = sr.DecimalField(read_only=True)
+    total_price = sr.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     total_quantity = sr.IntegerField(read_only=True)
     is_paid = sr.BooleanField(read_only=True)
 

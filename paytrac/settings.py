@@ -43,11 +43,11 @@ LOCAL_APPS = [
     'apps.core.apps.CoreConfig',
     'apps.common.apps.CommonConfig',
     'apps.invoice.apps.InvoiceConfig',
-    'apps.notification.apps.NotificationConfig'
+    'apps.notification.apps.NotificationConfig',
+    'apps.social_auth.apps.SocialAuthConfig',
 ]
 
 THIRD_PARTY_APPS = [
-    "channels",
     "cloudinary_storage",
     "debug_toolbar",
     "django_filters",

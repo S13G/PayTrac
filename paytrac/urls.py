@@ -57,6 +57,7 @@ urlpatterns_v1 = [
     path("auth/", include("apps.core.urls")),
     path("invoice/", include("apps.invoice.urls")),
     path("notification/", include("apps.notification.urls")),
+    path("social_auth/", include("apps.social_auth.urls")),
 ]
 
 urlpatterns = [

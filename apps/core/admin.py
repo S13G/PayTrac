@@ -24,6 +24,7 @@ class UserAdmin(BaseUserAdmin):
         "email_verified",
         "is_staff",
         "is_active",
+        "provider",
 
     )
     list_display_links = (
@@ -58,6 +59,7 @@ class UserAdmin(BaseUserAdmin):
             "Permissions",
             {
                 "fields": (
+                    "provider",
                     "is_active",
                     "is_staff",
                     "email_verified",
