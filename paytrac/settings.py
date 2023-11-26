@@ -358,7 +358,5 @@ FW_KEY = config("FLUTTERWAVE_SECRET_KEY")
 
 FW_PUBLIC_KEY = config("FLUTTERWAVE_PUBLIC_KEY")
 
-FW_VERIFY_LINK = config("FW_VERIFY_LINK")
-
 # database active connection minutes
 CONN_MAX_AGE = 300
