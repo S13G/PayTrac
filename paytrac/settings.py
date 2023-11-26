@@ -30,7 +30,6 @@ ALLOWED_HOSTS = []
 
 # Application definition
 DJANGO_APPS = [
-    "daphne",
     "jazzmin",  # not a django app but a custom django admin library
     "django.contrib.admin",
     "django.contrib.auth",
@@ -146,19 +145,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'paytrac.wsgi.application'
 
-ASGI_APPLICATION = "paytrac.asgi.application"
-
 AUTH_USER_MODEL = "core.User"
-
-# CHANNEL LAYERS
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
-        },
-    },
-}
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases

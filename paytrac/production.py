@@ -14,17 +14,6 @@ ALLOWED_HOSTS = ['.vercel.app', '.now.sh']
 
 CSRF_TRUSTED_ORIGINS = ["https://" + host for host in ALLOWED_HOSTS]
 
-# REDISCLOUD_URL = config("REDISCLOUD_URL")
-#
-# CHANNEL_LAYERS = {
-#     'default': {
-#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
-#         'CONFIG': {
-#             "hosts": [REDISCLOUD_URL],
-#         },
-#     },
-# }
-
 DATABASES = {
     'default': dj_database_url.config(
             default=config("DATABASE_URL"),
