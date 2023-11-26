@@ -301,6 +301,7 @@ JAZZMIN_SETTINGS = {
         "core.user": "fas fa-universal-access",
         "core.clientprofile": "far fa-user",
         "notification.notification": "fas fa-bell",
+        "invoice.invoice": "fas fa-file-invoice",
     },
     # Icons that are used when one is not manually specified
     "default_icon_parents": "fas fa-chevron-circle-right",

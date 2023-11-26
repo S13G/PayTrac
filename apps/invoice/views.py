@@ -1,3 +1,193 @@
-from django.shortcuts import render
+from django.db import transaction
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+
+from apps.common.errors import ErrorCode
+from apps.common.exceptions import RequestError
+from apps.common.responses import CustomResponse
+from apps.core.models import ClientProfile
+from apps.invoice.models import Invoice
+from apps.invoice.serializers import InvoiceSerializer
+from apps.notification.models import Notification
+
 
 # Create your views here.
+
+
+class RetrieveAllInvoicesView(APIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = InvoiceSerializer
+
+    @extend_schema(
+        summary="Retrieve all invoices",
+        description=(
+                "This endpoint allows an authenticated user to retrieve all invoices."
+        ),
+        tags=['Invoice'],
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(
+                description="Successfully retrieved all invoices",
+            )
+        }
+    )
+    def get(self, request):
+        user = self.request.user
+        invoices = user.invoices.all()
+        serialized_data = self.serializer_class(invoices, many=True).data
+        return CustomResponse.success(message="Successfully retrieved all invoices", data=serialized_data)
+
+
+class RetrieveUpdateDeleteInvoiceView(APIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = InvoiceSerializer
+
+    @extend_schema(
+        summary="Retrieve invoice",
+        description=(
+                "This endpoint allows an authenticated user to retrieve an invoice."
+        ),
+        tags=['Invoice'],
+        responses={
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+                description="Provide an invoice id"
+            ),
+            status.HTTP_200_OK: OpenApiResponse(
+                description="Fetched successfully"
+            ),
+            status.HTTP_404_NOT_FOUND: OpenApiResponse(
+                description="Invoice not found"
+            )
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        user = self.request.user
+        invoice_id = self.kwargs.get("invoice_id")
+        if not invoice_id:
+            raise RequestError(err_code=ErrorCode.INVALID_ENTRY, err_msg="Invoice id not provided",
+                               status_code=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            invoice = Invoice.objects.get(id=invoice_id, business_owner=user)
+        except Invoice.DoesNotExist:
+            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="Invoice not found",
+                               status_code=status.HTTP_404_NOT_FOUND)
+
+        serialized_data = self.serializer_class(invoice).data
+        return CustomResponse.success(message="Successfully retrieved invoice", data=serialized_data)
+
+    @extend_schema(
+        summary="Update invoice",
+        description=(
+                "This endpoint allows an authenticated user to update an invoice."
+        ),
+        tags=['Invoice'],
+        responses={
+            status.HTTP_202_ACCEPTED: OpenApiResponse(
+                description="Updated successfully"
+            ),
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+                description="Provide an invoice id"
+            ),
+            status.HTTP_404_NOT_FOUND: OpenApiResponse(
+                description="Invoice not found"
+            )
+        }
+    )
+    def patch(self, request, *args, **kwargs):
+        user = self.request.user
+        invoice_id = self.kwargs.get("invoice_id")
+        if not invoice_id:
+            raise RequestError(err_code=ErrorCode.INVALID_ENTRY, err_msg="Invoice id not provided",
+                               status_code=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            invoice = Invoice.objects.get(id=invoice_id, business_owner=user)
+        except Invoice.DoesNotExist:
+            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="Invoice not found",
+                               status_code=status.HTTP_404_NOT_FOUND)
+
+        serializer = self.serializer_class(invoice, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        serialized_data = self.serializer_class(serializer).data
+        return CustomResponse.success(message="Updated successfully", data=serialized_data,
+                                      status_code=status.HTTP_202_ACCEPTED)
+
+    @extend_schema(
+        summary="Delete invoice",
+        description=(
+                "This endpoint allows an authenticated user to delete an invoice."
+        ),
+        tags=['Invoice'],
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(
+                description="Deleted successfully"
+            ),
+            status.HTTP_404_NOT_FOUND: OpenApiResponse(
+                description="Invoice not found"
+            ),
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+                description="Provide an invoice id"
+            )
+        }
+    )
+    def delete(self, request, *args, **kwargs):
+        user = self.request.user
+        invoice_id = self.kwargs.get("invoice_id")
+        if not invoice_id:
+            raise RequestError(err_code=ErrorCode.INVALID_ENTRY, err_msg="Invoice id not provided",
+                               status_code=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            invoice = Invoice.objects.get(id=invoice_id, business_owner=user)
+        except Invoice.DoesNotExist:
+            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="Invoice not found",
+                               status_code=status.HTTP_404_NOT_FOUND)
+
+        invoice.delete()
+        return CustomResponse.success(message="Deleted successfully")
+
+
+class CreateInvoiceView(APIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = InvoiceSerializer
+
+    @extend_schema(
+        summary="Create Invoice",
+        description=(
+                "This endpoint allows an authenticated business owner to create an invoice for a client"
+        ),
+        tags=['Invoice'],
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(
+                description="Created successfully"
+            ),
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(
+                description="Provide client profile id"
+            ),
+            status.HTTP_404_NOT_FOUND: OpenApiResponse(
+                description="Client profile not found"
+            )
+        }
+    )
+    @transaction.atomic()
+    def post(self, request, *args, **kwargs):
+        user = self.request.user
+        client_id = self.kwargs.get("client_id")
+        if not client_id:
+            raise RequestError(err_code=ErrorCode.INVALID_ENTRY, err_msg="Client profile id not provided",
+                               status_code=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            client = ClientProfile.objects.get(id=client_id, business_owner=user)
+        except ClientProfile.DoesNotExist:
+            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="Client profile not found",
+                               status_code=status.HTTP_404_NOT_FOUND)
+
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        Invoice.objects.create(business_owner=user, client=client, **serializer.validated_data)
+        Notification.objects.create(title=f"You have created an invoice for {client.full_name}", user=user)
+        return CustomResponse.success(message="Created successfully")
