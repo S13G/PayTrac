@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers as sr
 
 from apps.core.serializers import BusinessUserSerializer, ClientProfileSerializer
@@ -24,27 +25,32 @@ class InvoiceSerializer(sr.Serializer):
     total_quantity = sr.IntegerField(read_only=True)
     is_paid = sr.BooleanField(read_only=True)
 
-    def get_fields(self,):
-        fields = super().get_fields()
-        if request.method == "PATCH":
-            fields["issued_on"].read_only = True
-        return fields
-
     def update(self, instance, validated_data):
         # Extract invoice items data
         items_data = validated_data.pop("invoice_items", [])
 
-        # Update or create invoice items
-        for item_data in items_data:
-            item_id = item_data.get("id")
-            item, created = InvoiceItem.objects.update_or_create(
-                id=item_id, defaults=item_data, invoice=instance
-            )
+        with transaction.atomic():
+            # Update or create invoice items
+            for item_data in items_data:
+                item_title = item_data.get("title")
 
-        # Update remaining fields of the invoice
-        for key, value in validated_data.items():
-            setattr(instance, key, value)
+                # Filter the InvoiceItems based on title and invoice
+                items_to_update = InvoiceItem.objects.filter(title=item_title, invoice=instance)
 
-        instance.save()
+                # Update each matching InvoiceItem
+                for item_to_update in items_to_update:
+                    for key, value in item_data.items():
+                        setattr(item_to_update, key, value)
+                    item_to_update.save()
+
+                # If no matching InvoiceItem is found, create a new one
+                if not items_to_update.exists():
+                    InvoiceItem.objects.create(title=item_title, invoice=instance, **item_data)
+
+            # Update remaining fields of the invoice
+            for key, value in validated_data.items():
+                setattr(instance, key, value)
+
+            instance.save()
 
         return instance

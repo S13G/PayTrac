@@ -111,7 +111,7 @@ class RetrieveUpdateDeleteInvoiceView(APIView):
         serializer = self.serializer_class(invoice, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        serialized_data = self.serializer_class(serializer).data
+        serialized_data = self.serializer_class(invoice).data
         return CustomResponse.success(message="Updated successfully", data=serialized_data,
                                       status_code=status.HTTP_202_ACCEPTED)
 
