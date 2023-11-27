@@ -13,7 +13,7 @@ User = get_user_model()
 class Wallet(BaseModel):
     account_number = models.CharField(max_length=50, null=True)
     bank_name = models.CharField(max_length=255, null=True)
-    flw_ref = models.CharField(max_length=255, null=True)
+    order_ref = models.CharField(max_length=255, null=True)
     business_owner = models.OneToOneField(User, on_delete=models.CASCADE, related_name="wallet")
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
 

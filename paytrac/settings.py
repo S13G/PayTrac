@@ -11,8 +11,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
 from datetime import timedelta
-from decouple import config
 from pathlib import Path
+
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -358,3 +359,5 @@ FW_VERIFY_LINK = config("FW_VERIFY_LINK")
 
 # database active connection minutes
 CONN_MAX_AGE = 300
+
+INVOIC_PAYMENT_LINK = "https://sandbox-flw-web-v3.herokuapp.com/pay/t3bzxcibpuye"

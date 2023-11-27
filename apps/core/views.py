@@ -85,7 +85,7 @@ class RegistrationView(APIView):
             })
             res_data = res.get('data')
             Wallet.objects.create(business_owner=user, account_number=res_data.get('accountnumber'),
-                                  bank_name=res_data.get('bankname'), flw_ref=res_data.get('flw_reference'))
+                                  bank_name=res_data.get('bankname'), order_ref=res_data.get('orderRef'))
         except Exception as e:
             raise RequestError(err_code=ErrorCode.FAILED, err_msg=f"Account registration failed. {e}",
                                status_code=status.HTTP_400_BAD_REQUEST)

@@ -29,3 +29,15 @@ def send_otp_email(user, email=None, template=None):
 
     # Send the email
     send_email(subject, recipient, message=message, template=template, context=context)
+
+
+def send_invoice_email(user, email=None, template=None):
+    # Compose the email subject and content
+    subject = 'Invoice'
+    recipient = [user.email]
+    context = {'full_name': user.full_name, 'account_number': user.wallet.account_number,
+               'bank_name': user.wallet.bank_name}
+    message = render_to_string(template, context)
+
+    # Send the email
+    send_email(subject, recipient, message=message, template=template, context=context)

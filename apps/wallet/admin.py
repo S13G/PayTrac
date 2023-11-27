@@ -20,7 +20,7 @@ class WalletAdmin(admin.ModelAdmin):
     list_display = (
         "account_number",
         "bank_name",
-        "flw_ref",
+        "order_ref",
         "business_owner",
         "balance",
     )
