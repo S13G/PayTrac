@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.utils import timezone
 
 from apps.common.models import BaseModel
 from apps.core.models import ClientProfile
@@ -37,6 +38,10 @@ class Invoice(BaseModel):
         for item in self.invoice_items.all():
             total += item.quantity
         return total
+
+    @property
+    def is_overdue(self):
+        return self.due_on < timezone.now()
 
     def save(self, *args, **kwargs):
         if not self.invoice_number:

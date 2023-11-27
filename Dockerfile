@@ -29,12 +29,11 @@ ENV ADMIN_EMAIL=${ADMIN_EMAIL}
 ENV ADMIN_PASSWORD=${ADMIN_EMAIL}
 ENV FLUTTERWAVE_SECRET_KEY=${FLUTTERWAVE_SECRET_KEY}
 ENV FLUTTERWAVE_PUBLIC_KEY=${FLUTTERWAVE_PUBLIC_KEY}
-ENV PORT=${PORT}
 ENV DB_PASS=${DB_PASS}
 ENV FW_VERIFY_LINK=${FW_VERIFY_LINK}
 
 # Copy the requirements.txt file into the workdir
-COPY ../requirements.txt requirements.txt
+COPY requirements.txt requirements.txt
 
 # Install the dependencies
 RUN pip3 install -r requirements.txt

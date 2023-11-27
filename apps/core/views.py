@@ -1,10 +1,13 @@
+import uuid
 from datetime import timedelta
 
 import pyotp
+from django.conf import settings
 from django.contrib.auth import authenticate
 from django.db import transaction, IntegrityError
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
+from rave_python import Rave
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
@@ -21,6 +24,7 @@ from apps.core.emails import send_otp_email
 from apps.core.models import OTPSecret, ClientProfile
 from apps.core.serializers import *
 from apps.notification.models import Notification
+from apps.wallet.models import Wallet
 from utilities.encryption import decrypt_token_to_profile, encrypt_profile_to_token
 
 User = get_user_model()
@@ -54,21 +58,40 @@ class RegistrationView(APIView):
     )
     @transaction.atomic()
     def post(self, request):
-        serializer = self.serializer_class(data=request.data, context={"request": request})
+        serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
         email = validated_data['email']
 
-        # Check if user exists
+        rave = Rave(settings.RAVE_PUBLIC_KEY, settings.RAVE_SECRET_KEY, usingEnv=False)
+
         try:
             User.objects.get(email=email)
+            raise RequestError(err_code=ErrorCode.ALREADY_EXISTS, err_msg="Account with this email already exists",
+                               status_code=status.HTTP_409_CONFLICT)
         except User.DoesNotExist:
-            User.objects.create_user(**validated_data)
-            return CustomResponse.success(message="Business account registered successfully",
-                                          status_code=status.HTTP_201_CREATED)
+            pass
 
-        raise RequestError(err_code=ErrorCode.ALREADY_EXISTS, err_msg="Account with this email already exists",
-                           status_code=status.HTTP_409_CONFLICT)
+        try:
+            user = User.objects.create_user(**validated_data)
+            res = rave.VirtualAccount.create({
+                "email": email,
+                "is_permanent": True,
+                "bvn": validated_data['bvn'],
+                "tx_ref": f"{uuid.uuid4().hex[:10].upper()}",
+                "firstname": validated_data['full_name'].split(" ")[0],
+                "lastname": validated_data['full_name'].split(" ")[1],
+                "narration": validated_data['full_name']
+            })
+            res_data = res.get('data')
+            Wallet.objects.create(business_owner=user, account_number=res_data.get('accountnumber'),
+                                  bank_name=res_data.get('bankname'), flw_ref=res_data.get('flw_reference'))
+        except Exception as e:
+            raise RequestError(err_code=ErrorCode.FAILED, err_msg=f"Account registration failed. {e}",
+                               status_code=status.HTTP_400_BAD_REQUEST)
+
+        return CustomResponse.success(message="Business account registered successfully",
+                                      status_code=status.HTTP_201_CREATED)
 
 
 class VerifyEmailView(APIView):

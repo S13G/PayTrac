@@ -22,6 +22,7 @@ class UserAdmin(BaseUserAdmin):
         "full_name",
         "email",
         "email_verified",
+        "bvn",
         "is_staff",
         "is_active",
         "provider",
@@ -52,6 +53,7 @@ class UserAdmin(BaseUserAdmin):
                 "fields": (
                     "full_name",
                     "avatar",
+                    "bvn",
                 )
             },
         ),

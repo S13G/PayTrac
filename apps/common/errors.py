@@ -16,3 +16,4 @@ class ErrorCode:
     PAYMENT_VERIFICATION_FAILED = "payment_verification_failed"
     FAILED_PAYMENT = "failed_payment"
     INSUFFICIENT_COINS = "insufficient_coins"
+    FAILED = "failed"

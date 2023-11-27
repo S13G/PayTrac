@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django_countries.fields import CountryField
 
 from apps.common.models import BaseModel
-from apps.common.validators import validate_phone_number
+from apps.common.validators import validate_phone_number, validate_bvn
 from apps.core.managers import CustomUserManager, ClientManager
 
 
@@ -19,6 +19,7 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     email = models.EmailField(_("Email address"), unique=True)
     avatar = models.ImageField(upload_to="static/business_avatars", null=True, blank=True)
     email_verified = models.BooleanField(default=False)
+    bvn = models.CharField(max_length=11, null=True, validators=[validate_bvn])
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False)
     provider = models.BooleanField(default=False)
@@ -61,4 +62,4 @@ class ClientProfile(BaseModel):
     objects = ClientManager()
 
     def __str__(self):
-        return f"{self.business_profile.full_name} ---> {self.full_name}"
+        return f"{self.full_name}"

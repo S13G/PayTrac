@@ -45,6 +45,8 @@ LOCAL_APPS = [
     'apps.invoice.apps.InvoiceConfig',
     'apps.notification.apps.NotificationConfig',
     'apps.social_auth.apps.SocialAuthConfig',
+    'apps.wallet.apps.WalletConfig',
+    'apps.chat.apps.ChatConfig',
 ]
 
 THIRD_PARTY_APPS = [
@@ -209,7 +211,6 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Email settings for SSL(Mainly for development and tests)
@@ -289,6 +290,8 @@ JAZZMIN_SETTINGS = {
         "core.clientprofile": "far fa-user",
         "notification.notification": "fas fa-bell",
         "invoice.invoice": "fas fa-file-invoice",
+        "wallet.wallet": "fas fa-wallet",
+        "wallet.transaction": "fas fa-credit-card",
     },
     # Icons that are used when one is not manually specified
     "default_icon_parents": "fas fa-chevron-circle-right",
@@ -343,9 +346,13 @@ SILENCED_SYSTEM_CHECKS = [
 ]
 
 # Flutterwave variables
-FW_KEY = config("FLUTTERWAVE_SECRET_KEY")
+FW_SECRET_KEY = config("FLUTTERWAVE_SECRET_KEY")
+
+RAVE_SECRET_KEY = FW_SECRET_KEY
 
 FW_PUBLIC_KEY = config("FLUTTERWAVE_PUBLIC_KEY")
+
+RAVE_PUBLIC_KEY = FW_PUBLIC_KEY
 
 FW_VERIFY_LINK = config("FW_VERIFY_LINK")
 

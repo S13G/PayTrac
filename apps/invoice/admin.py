@@ -36,6 +36,7 @@ class InvoiceAdmin(admin.ModelAdmin):
         "issued_on",
         "due_on",
         "is_paid",
+        "is_overdue",
         "total_price",
         "total_quantity"
     ]

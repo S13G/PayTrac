@@ -3,7 +3,7 @@ from django.core.validators import validate_email
 from django_countries.serializer_fields import CountryField
 from rest_framework import serializers as sr
 
-from apps.common.validators import validate_phone_number
+from apps.common.validators import validate_phone_number, validate_bvn
 
 User = get_user_model()
 
@@ -11,6 +11,7 @@ User = get_user_model()
 class RegisterSerializer(sr.Serializer):
     full_name = sr.CharField(default="John Bull")
     email = sr.CharField()
+    bvn = sr.CharField(max_length=11, validators=[validate_bvn])
     password = sr.CharField(write_only=True)
 
     @staticmethod

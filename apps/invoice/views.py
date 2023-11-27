@@ -21,7 +21,7 @@ class RetrieveAllInvoicesView(APIView):
     serializer_class = InvoiceSerializer
 
     @extend_schema(
-        summary="Retrieve all invoices",
+        summary="Retrieve all invoices / Recent Activity",
         description=(
                 "This endpoint allows an authenticated user to retrieve all invoices."
         ),
@@ -34,7 +34,7 @@ class RetrieveAllInvoicesView(APIView):
     )
     def get(self, request):
         user = self.request.user
-        invoices = user.business_invoices.all()
+        invoices = user.business_invoices.order_by("-created")
         serialized_data = self.serializer_class(invoices, many=True).data
         return CustomResponse.success(message="Successfully retrieved all invoices", data=serialized_data)
 
