@@ -4,8 +4,11 @@ import requests
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from rest_framework import status
+from rest_framework.decorators import authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
@@ -137,7 +140,11 @@ class TransactionDetailView(APIView):
         return CustomResponse.success(message="Retrieved successfully", data=data)
 
 
+@authentication_classes([])
+@method_decorator(csrf_exempt, name='dispatch')
 class FlutterwaveWebhookView(APIView):
+    authentication_classes = []
+
     @extend_schema(
         summary="Webhook endpoint",
         description="This endpoint allows a business owner to receive webhook notifications",
