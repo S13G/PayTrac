@@ -307,10 +307,9 @@ class LogoutView(TokenBlacklistView):
         serializer = self.serializer_class(data=self.request.data)
         try:
             serializer.is_valid(raise_exception=True)
-            serializer.save()
             return CustomResponse.success(message="Logged out successfully.")
         except TokenError:
-            raise RequestError(err_code=ErrorCode.SERVER_ERROR, err_msg="Token is blacklisted.",
+            raise RequestError(err_code=ErrorCode.INVALID_ENTRY, err_msg="Token is blacklisted",
                                status_code=status.HTTP_400_BAD_REQUEST)
 
 
