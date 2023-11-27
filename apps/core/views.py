@@ -2,6 +2,7 @@ import uuid
 from datetime import timedelta
 
 import pyotp
+import requests
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.db import transaction, IntegrityError
@@ -242,6 +243,24 @@ class LoginView(TokenObtainPairView):
         if not user.email_verified:
             raise RequestError(err_code=ErrorCode.UNVERIFIED_USER, err_msg="Verify your email first",
                                status_code=status.HTTP_400_BAD_REQUEST)
+
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f"Bearer {settings.FW_SECRET_KEY}"
+        }
+
+        order_ref = user.wallet.order_ref
+
+        url = f"https://api.flutterwave.com/v3/virtual-account-numbers/{order_ref}"
+
+        try:
+            response = requests.get(url, headers=headers).json()
+            response_data = response.get('data')
+        except Exception as e:
+            raise RequestError(err_code=ErrorCode.FAILED, err_msg=str(e), status_code=status.HTTP_400_BAD_REQUEST)
+
+        user.wallet.balance = response_data.get('amount')
+        user.wallet.save()
 
         token_response = super().post(request)
         tokens = token_response.data

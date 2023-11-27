@@ -1,4 +1,2 @@
-1. Fetch all transactions using only the from and to parameter
-2. Fetch a single transaction detail using the transaction reference/ID
 3. Set up the payment link created into the invoice templates so clients can pay
 4. Transfer the money from the virtual wallet into the original wallet in the database or just add it up instead by first fetching it and then you could deduct

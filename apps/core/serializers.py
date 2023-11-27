@@ -9,7 +9,7 @@ User = get_user_model()
 
 
 class RegisterSerializer(sr.Serializer):
-    full_name = sr.CharField(default="John Bull", required=True)
+    full_name = sr.CharField(default="John Bull")
     email = sr.CharField()
     bvn = sr.CharField(max_length=11, validators=[validate_bvn])
     password = sr.CharField(write_only=True)

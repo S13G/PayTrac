@@ -80,7 +80,7 @@ REST_FRAMEWORK = {
     ),
     "COERCE_DECIMAL_TO_STRING": False,
     "DEFAULT_PAGINATION_CLASS": "apps.common.paginator.CustomPagination",
-    # "EXCEPTION_HANDLER": "apps.common.exceptions.custom_exception_handler",
+    "EXCEPTION_HANDLER": "apps.common.exceptions.custom_exception_handler",
     "PAGE_SIZE": 30,
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.AllowAny",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
@@ -360,4 +360,4 @@ FW_VERIFY_LINK = config("FW_VERIFY_LINK")
 # database active connection minutes
 CONN_MAX_AGE = 300
 
-INVOIC_PAYMENT_LINK = "https://sandbox-flw-web-v3.herokuapp.com/pay/t3bzxcibpuye"
+INVOICE_PAYMENT_LINK = "https://sandbox-flw-web-v3.herokuapp.com/pay/t3bzxcibpuye"
