@@ -1,6 +1,7 @@
 import json
 
 import requests
+from braces.views import CsrfExemptMixin
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -139,7 +140,7 @@ class TransactionDetailView(APIView):
         return CustomResponse.success(message="Retrieved successfully", data=data)
 
 
-class FlutterwaveWebhookView(APIView):
+class FlutterwaveWebhookView(CsrfExemptMixin, APIView):
     @extend_schema(
         summary="Webhook endpoint",
         description="This endpoint allows a business owner to receive webhook notifications",
@@ -159,7 +160,6 @@ class FlutterwaveWebhookView(APIView):
             )
         }
     )
-    @method_decorator(csrf_exempt, name='dispatch')
     def post(self, request):
         secret_hash = settings.VERIFY_HASH
         signature = self.request.headers.get("verifi-hash")
