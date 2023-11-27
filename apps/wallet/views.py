@@ -1,12 +1,9 @@
 import json
 
 import requests
-from braces.views import CsrfExemptMixin
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -140,7 +137,7 @@ class TransactionDetailView(APIView):
         return CustomResponse.success(message="Retrieved successfully", data=data)
 
 
-class FlutterwaveWebhookView(CsrfExemptMixin, APIView):
+class FlutterwaveWebhookView(APIView):
     @extend_schema(
         summary="Webhook endpoint",
         description="This endpoint allows a business owner to receive webhook notifications",

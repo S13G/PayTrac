@@ -45,4 +45,4 @@ COPY .. .
 # collectstatic without interactive input, perform migrations and create a superuser automatically
 CMD python3 manage.py migrate --settings=$DJANGO_SETTINGS_MODULE && \
     python3 manage.py createsu --settings=$DJANGO_SETTINGS_MODULE && \
-    python3 manage.py runserver 8000
+    python3 manage.py runserver 0.0.0.0:8000
