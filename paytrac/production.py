@@ -12,13 +12,11 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['.vercel.app', '.now.sh']
 
-CSRF_TRUSTED_ORIGINS = ["https://" + host for host in ALLOWED_HOSTS]
-
 DATABASES = {
     'default': dj_database_url.config(
-            default=config("DATABASE_URL"),
-            conn_max_age=300,
-            conn_health_checks=True,
+        default=config("DATABASE_URL"),
+        conn_max_age=300,
+        conn_health_checks=True,
     )
 }
 

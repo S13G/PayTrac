@@ -8,6 +8,7 @@ from apps.common.errors import ErrorCode
 from apps.common.exceptions import RequestError
 from apps.common.responses import CustomResponse
 from apps.core.models import ClientProfile
+from apps.invoice.emails import send_invoice_email
 from apps.invoice.models import Invoice, InvoiceItem
 from apps.invoice.serializers import InvoiceSerializer
 from apps.notification.models import Notification
@@ -205,6 +206,9 @@ class CreateInvoiceView(APIView):
         Notification.objects.create(title=f"You have created an invoice for {client.full_name}", user=user)
 
         serialized_data = self.serializer_class(invoice).data
+
+        send_invoice_email(user=user, invoice=invoice, template="invoice.html")
+
         return CustomResponse.success(message="Created successfully", data=serialized_data,
                                       status_code=status.HTTP_201_CREATED)
 

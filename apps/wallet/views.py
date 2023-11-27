@@ -4,11 +4,10 @@ import requests
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from rest_framework import status
-from rest_framework.decorators import authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
@@ -140,69 +139,67 @@ class TransactionDetailView(APIView):
         return CustomResponse.success(message="Retrieved successfully", data=data)
 
 
-@authentication_classes([])
-@method_decorator(csrf_exempt, name='dispatch')
-class FlutterwaveWebhookView(APIView):
-    authentication_classes = []
+@extend_schema(
+    summary="Webhook endpoint",
+    description="This endpoint allows a business owner to receive webhook notifications",
+    tags=['Wallet'],
+    responses={
+        status.HTTP_200_OK: OpenApiResponse(
+            description="Webhook processed successfully"
+        ),
+        status.HTTP_401_UNAUTHORIZED: OpenApiResponse(
+            description="Invalid signature"
+        ),
+        status.HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(
+            description="Failed to verify transaction"
+        ),
+        status.HTTP_404_NOT_FOUND: OpenApiResponse(
+            description="User not found"
+        )
+    }
+)
+@require_POST
+@csrf_exempt
+def webhook(request):
+    secret_hash = settings.VERIFY_HASH
+    signature = request.headers.get("verifi-hash")
+    print(secret_hash)
+    print(signature)
+    if signature is None or (signature != secret_hash):
+        # This request isn't from Flutterwave; discard
+        raise RequestError(err_code=ErrorCode.UNAUTHORIZED_USER, err_msg="Invalid signature",
+                           status_code=status.HTTP_401_UNAUTHORIZED)
 
-    @extend_schema(
-        summary="Webhook endpoint",
-        description="This endpoint allows a business owner to receive webhook notifications",
-        tags=['Wallet'],
-        responses={
-            status.HTTP_200_OK: OpenApiResponse(
-                description="Webhook processed successfully"
-            ),
-            status.HTTP_401_UNAUTHORIZED: OpenApiResponse(
-                description="Invalid signature"
-            ),
-            status.HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(
-                description="Failed to verify transaction"
-            ),
-            status.HTTP_404_NOT_FOUND: OpenApiResponse(
-                description="User not found"
-            )
-        }
-    )
-    def post(self, request):
-        secret_hash = settings.VERIFY_HASH
-        signature = self.request.headers.get("verifi-hash")
+    payload = json.loads(request.body)
+    print(payload)
 
-        if signature is None or (signature != secret_hash):
-            # This request isn't from Flutterwave; discard
-            raise RequestError(err_code=ErrorCode.UNAUTHORIZED_USER, err_msg="Invalid signature",
-                               status_code=status.HTTP_401_UNAUTHORIZED)
+    # Extract relevant details from the payload (adjust these based on your actual payload structure)
+    user_email = payload.get('customer', {}).get('email')
+    transaction_id = payload.get('id')
+    transaction_status = payload.get('status')
+    print(transaction_id)
 
-        payload = json.loads(request.body)
-        print(payload)
+    try:
+        # Retrieve the user from the database
+        user = User.objects.get(email=user_email)
+    except User.DoesNotExist:
+        raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="User with this email not found",
+                           status_code=status.HTTP_404_NOT_FOUND)
 
-        # Extract relevant details from the payload (adjust these based on your actual payload structure)
-        user_email = payload.get('customer', {}).get('email')
-        transaction_id = payload.get('id')
-        transaction_status = payload.get('status')
-        print(transaction_id)
+    # Verify the transaction
+    verification_url = f"https://api.flutterwave.com/v3/transactions/{transaction_id}/verify"
 
-        try:
-            # Retrieve the user from the database
-            user = User.objects.get(email=user_email)
-        except User.DoesNotExist:
-            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="User with this email not found",
-                               status_code=status.HTTP_404_NOT_FOUND)
+    try:
+        verification_response = requests.get(verification_url, headers=headers).json()
+        print(verification_response)
+    except requests.RequestException as e:
+        raise RequestError(err_code=ErrorCode.FAILED, err_msg="Failed to verify transaction",
+                           status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    # Check if the transaction is successful
+    if verification_response.get('status') == 'success':
+        if transaction_status == "successful":
+            # Update the wallet balance with the successful transaction amount
+            user.wallet.balance += verification_response.get('data', {}).get('amount')
+            user.wallet.save()
 
-        # Verify the transaction
-        verification_url = f"https://api.flutterwave.com/v3/transactions/{transaction_id}/verify"
-
-        try:
-            verification_response = requests.get(verification_url, headers=headers).json()
-            print(verification_response)
-        except requests.RequestException as e:
-            raise RequestError(err_code=ErrorCode.FAILED, err_msg="Failed to verify transaction",
-                               status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        # Check if the transaction is successful
-        if verification_response.get('status') == 'success':
-            if transaction_status == "successful":
-                # Update the wallet balance with the successful transaction amount
-                user.wallet.balance += verification_response.get('data', {}).get('amount')
-                user.wallet.save()
-
-        return CustomResponse.success(message="Webhook processed successfully")
+    return CustomResponse.success(message="Webhook processed successfully")

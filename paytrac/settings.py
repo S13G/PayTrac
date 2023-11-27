@@ -23,7 +23,7 @@ SECRET_KEY = config("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['57f8-102-88-37-51.ngrok-free.app', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['7161-102-88-37-103.ngrok-free.app', '127.0.0.1', 'localhost']
 
 # Application definition
 DJANGO_APPS = [
@@ -98,7 +98,7 @@ CORS_ALLOW_HEADERS = (
     "content-disposition",
 )
 
-# CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS").split(" ")
+CSRF_TRUSTED_ORIGINS = ["https://" + host for host in ALLOWED_HOSTS]
 
 CORS_ALLOW_CREDENTIALS = True
 
