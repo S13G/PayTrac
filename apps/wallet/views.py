@@ -1,6 +1,9 @@
+import json
+
 import requests
 from django.conf import settings
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -130,3 +133,61 @@ class TransactionDetailView(APIView):
             ]
         }
         return CustomResponse.success(message="Retrieved successfully", data=data)
+
+
+class FlutterwaveWebhookView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        summary="Webhook endpoint",
+        description="This endpoint allows a business owner to receive webhook notifications",
+        tags=['Wallet'],
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(
+                description="Webhook retrieved successfully"
+            ),
+            status.HTTP_401_UNAUTHORIZED: OpenApiResponse(
+                description="Invalid signature"
+            ),
+            status.HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(
+                description="Failed to verify transaction"
+            )
+        }
+    )
+    @csrf_exempt
+    def post(self, request):
+        user = request.user
+        secret_hash = settings.VERIFY_HASH
+        signature = self.request.headers.get("verifi-hash")
+
+        if signature is None or (signature != secret_hash):
+            # This request isn't from Flutterwave; discard
+            raise RequestError(err_code=ErrorCode.UNAUTHORIZED_USER, err_msg="Invalid signature",
+                               status_code=status.HTTP_401_UNAUTHORIZED)
+
+        payload = json.loads(request.body)
+        print(payload)
+
+        # Extract relevant details from the payload (adjust these based on your actual payload structure)
+        user_email = payload.get('customer', {}).get('email')
+        transaction_id = payload.get('id')
+        transaction_status = payload.get('status')
+        print(transaction_id)
+
+        # Verify the transaction
+        verification_url = f"https://api.flutterwave.com/v3/transactions/{transaction_id}/verify"
+
+        try:
+            verification_response = requests.get(verification_url, headers=headers).json()
+        except requests.RequestException as e:
+            raise RequestError(err_code=ErrorCode.FAILED, err_msg="Failed to verify transaction",
+                               status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Check if the transaction is successful
+        if verification_response.get('status') == 'success':
+            # Update the user's wallet based on the transaction details
+            if transaction_status == "successful":
+                # Update the wallet balance with the successful transaction amount
+                user.wallet.balance += verification_response.get('data', {}).get('amount')
+                user.wallet.save()
+
+        return CustomResponse.success(message="Webhook received successfully")

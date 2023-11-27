@@ -361,3 +361,5 @@ FW_VERIFY_LINK = config("FW_VERIFY_LINK")
 CONN_MAX_AGE = 300
 
 INVOICE_PAYMENT_LINK = "https://sandbox-flw-web-v3.herokuapp.com/pay/t3bzxcibpuye"
+
+VERIFY_HASH = config("VERIFY_HASH")
