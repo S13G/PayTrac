@@ -23,7 +23,7 @@ SECRET_KEY = config("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['57f8-102-88-37-51.ngrok-free.app', '127.0.0.1', 'localhost']
 
 # Application definition
 DJANGO_APPS = [
