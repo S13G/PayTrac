@@ -184,7 +184,6 @@ class FlutterwaveWebhookView(APIView):
                                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
         # Check if the transaction is successful
         if verification_response.get('status') == 'success':
-            # Update the user's wallet based on the transaction details
             if transaction_status == "successful":
                 # Update the wallet balance with the successful transaction amount
                 user.wallet.balance += verification_response.get('data', {}).get('amount')
