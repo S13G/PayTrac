@@ -158,7 +158,6 @@ class FlutterwaveWebhookView(APIView):
             )
         }
     )
-    @csrf_exempt
     def post(self, request):
         secret_hash = settings.VERIFY_HASH
         signature = self.request.headers.get("verifi-hash")
@@ -189,6 +188,7 @@ class FlutterwaveWebhookView(APIView):
 
         try:
             verification_response = requests.get(verification_url, headers=headers).json()
+            print(verification_response)
         except requests.RequestException as e:
             raise RequestError(err_code=ErrorCode.FAILED, err_msg="Failed to verify transaction",
                                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -196,7 +196,6 @@ class FlutterwaveWebhookView(APIView):
         if verification_response.get('status') == 'success':
             if transaction_status == "successful":
                 # Update the wallet balance with the successful transaction amount
-                print()
                 user.wallet.balance += verification_response.get('data', {}).get('amount')
                 user.wallet.save()
 
