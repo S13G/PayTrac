@@ -207,3 +207,49 @@ class CreateInvoiceView(APIView):
         serialized_data = self.serializer_class(invoice).data
         return CustomResponse.success(message="Created successfully", data=serialized_data,
                                       status_code=status.HTTP_201_CREATED)
+
+
+class RetrievePaidInvoicesView(APIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = InvoiceSerializer
+
+    @extend_schema(
+        summary="Retrieve paid invoices",
+        description=(
+                "This endpoint allows an authenticated user to retrieve all paid invoices."
+        ),
+        tags=['Invoice'],
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(
+                description="Retrieved successfully",
+            )
+        }
+    )
+    def get(self, request):
+        user = request.user
+        invoices = Invoice.objects.filter(business_owner=user, is_paid=True).order_by("-created")
+        serialized_data = self.serializer_class(invoices, many=True).data
+        return CustomResponse.success(message="Retrieved successfully", data=serialized_data)
+
+
+class RetrieveUnpaidInvoicesView(APIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = InvoiceSerializer
+
+    @extend_schema(
+        summary="Retrieve unpaid invoices",
+        description=(
+                "This endpoint allows an authenticated user to retrieve all unpaid invoices."
+        ),
+        tags=['Invoice'],
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(
+                description="Retrieved successfully",
+            )
+        }
+    )
+    def get(self, request):
+        user = request.user
+        invoices = Invoice.objects.filter(business_owner=user, is_paid=False).order_by("-created")
+        serialized_data = self.serializer_class(invoices, many=True).data
+        return CustomResponse.success(message="Retrieved successfully", data=serialized_data)

@@ -2,6 +2,7 @@ import json
 
 import requests
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import extend_schema, OpenApiResponse
@@ -12,6 +13,8 @@ from rest_framework.views import APIView
 from apps.common.errors import ErrorCode
 from apps.common.exceptions import RequestError
 from apps.common.responses import CustomResponse
+
+User = get_user_model()
 
 headers = {
     'Content-Type': 'application/json',
@@ -136,27 +139,27 @@ class TransactionDetailView(APIView):
 
 
 class FlutterwaveWebhookView(APIView):
-    permission_classes = (IsAuthenticated,)
-
     @extend_schema(
         summary="Webhook endpoint",
         description="This endpoint allows a business owner to receive webhook notifications",
         tags=['Wallet'],
         responses={
             status.HTTP_200_OK: OpenApiResponse(
-                description="Webhook retrieved successfully"
+                description="Webhook processed successfully"
             ),
             status.HTTP_401_UNAUTHORIZED: OpenApiResponse(
                 description="Invalid signature"
             ),
             status.HTTP_500_INTERNAL_SERVER_ERROR: OpenApiResponse(
                 description="Failed to verify transaction"
+            ),
+            status.HTTP_404_NOT_FOUND: OpenApiResponse(
+                description="User not found"
             )
         }
     )
     @csrf_exempt
     def post(self, request):
-        user = request.user
         secret_hash = settings.VERIFY_HASH
         signature = self.request.headers.get("verifi-hash")
 
@@ -174,6 +177,13 @@ class FlutterwaveWebhookView(APIView):
         transaction_status = payload.get('status')
         print(transaction_id)
 
+        try:
+            # Retrieve the user from the database
+            user = User.objects.get(email=user_email)
+        except User.DoesNotExist:
+            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="User with this email not found",
+                               status_code=status.HTTP_404_NOT_FOUND)
+
         # Verify the transaction
         verification_url = f"https://api.flutterwave.com/v3/transactions/{transaction_id}/verify"
 
@@ -186,7 +196,8 @@ class FlutterwaveWebhookView(APIView):
         if verification_response.get('status') == 'success':
             if transaction_status == "successful":
                 # Update the wallet balance with the successful transaction amount
+                print()
                 user.wallet.balance += verification_response.get('data', {}).get('amount')
                 user.wallet.save()
 
-        return CustomResponse.success(message="Webhook received successfully")
+        return CustomResponse.success(message="Webhook processed successfully")
