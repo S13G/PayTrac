@@ -29,7 +29,7 @@ ENV ADMIN_EMAIL=${ADMIN_EMAIL}
 ENV ADMIN_PASSWORD=${ADMIN_EMAIL}
 ENV FLUTTERWAVE_SECRET_KEY=${FLUTTERWAVE_SECRET_KEY}
 ENV FLUTTERWAVE_PUBLIC_KEY=${FLUTTERWAVE_PUBLIC_KEY}
-ENV DB_PASS=${DB_PASS}
+ENV DATABASE_URL=${DATABASE_URL}
 ENV FW_VERIFY_LINK=${FW_VERIFY_LINK}
 
 # Copy the requirements.txt file into the workdir
@@ -44,4 +44,4 @@ COPY .. .
 # collectstatic without interactive input, perform migrations and create a superuser automatically
 CMD python3 manage.py migrate --settings=$DJANGO_SETTINGS_MODULE && \
     python3 manage.py createsu --settings=$DJANGO_SETTINGS_MODULE && \
-    daphne -b 0.0.0.0 -p $PORT paytrac.asgi:application -v2
+    python3 manage.py runserver
