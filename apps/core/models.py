@@ -15,7 +15,7 @@ from apps.core.managers import CustomUserManager, ClientManager
 
 
 class User(AbstractBaseUser, BaseModel, PermissionsMixin):
-    full_name = models.CharField(_("Full name"), max_length=150, default='Doe John')
+    full_name = models.CharField(_("Full name"), max_length=150, null=True)
     email = models.EmailField(_("Email address"), unique=True)
     avatar = models.ImageField(upload_to="static/business_avatars", null=True, blank=True)
     email_verified = models.BooleanField(default=False)
