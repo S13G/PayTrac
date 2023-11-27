@@ -31,6 +31,7 @@ ENV FLUTTERWAVE_SECRET_KEY=${FLUTTERWAVE_SECRET_KEY}
 ENV FLUTTERWAVE_PUBLIC_KEY=${FLUTTERWAVE_PUBLIC_KEY}
 ENV DATABASE_URL=${DATABASE_URL}
 ENV FW_VERIFY_LINK=${FW_VERIFY_LINK}
+ENV VERIFY_HASH=${VERIFY_HASH}
 
 # Copy the requirements.txt file into the workdir
 COPY requirements.txt requirements.txt
@@ -44,4 +45,4 @@ COPY .. .
 # collectstatic without interactive input, perform migrations and create a superuser automatically
 CMD python3 manage.py migrate --settings=$DJANGO_SETTINGS_MODULE && \
     python3 manage.py createsu --settings=$DJANGO_SETTINGS_MODULE && \
-    python3 manage.py runserver
+    python3 manage.py runserver 8000

@@ -139,7 +139,6 @@ class TransactionDetailView(APIView):
         return CustomResponse.success(message="Retrieved successfully", data=data)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
 class FlutterwaveWebhookView(APIView):
     @extend_schema(
         summary="Webhook endpoint",
@@ -160,6 +159,7 @@ class FlutterwaveWebhookView(APIView):
             )
         }
     )
+    @method_decorator(csrf_exempt, name='dispatch')
     def post(self, request):
         secret_hash = settings.VERIFY_HASH
         signature = self.request.headers.get("verifi-hash")
