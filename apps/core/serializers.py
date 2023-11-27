@@ -53,6 +53,7 @@ class BusinessUserSerializer(sr.Serializer):
     full_name = sr.CharField()
     email = sr.EmailField(read_only=True)
     avatar = sr.ImageField()
+    bvn = sr.CharField()
     email_verified = sr.BooleanField(read_only=True)
 
     def to_representation(self, instance):

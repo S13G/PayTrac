@@ -246,8 +246,19 @@ class LoginView(TokenObtainPairView):
         token_response = super().post(request)
         tokens = token_response.data
 
-        profile_serializer = BusinessUserSerializer(user, context={"request": request})
-        response_data = {"tokens": tokens, "profile_data": profile_serializer.data}
+        data = {
+            "id": user.id,
+            "full_name": user.full_name,
+            "email": user.email,
+            "email_verified": user.email_verified,
+            "bvn": user.bvn,
+            "avatar": user.profile_image(),
+            "wallet_id": user.wallet.id,
+            "wallet_balance": user.wallet.balance,
+            "wallet_account_number": user.wallet.account_number,
+            "wallet_bank_name": user.wallet.bank_name,
+        }
+        response_data = {"tokens": tokens, "profile_data": data}
         return CustomResponse.success(message="Logged in successfully", data=response_data)
 
 

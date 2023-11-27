@@ -5,7 +5,6 @@ from faker import Faker
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from apps.core.serializers import BusinessUserSerializer
 from apps.social_auth import google
 # from apps.core.serializers import ProfileSerializer
 from apps.social_auth.funcs import register_social_user
@@ -47,12 +46,21 @@ class GoogleSocialAuthSerializer(serializers.Serializer):
 
     @staticmethod
     def _get_user_data(user):
-        user = user
-        profile_serializer = BusinessUserSerializer(user).data
+        data = {
+            "id": user.id,
+            "full_name": user.full_name,
+            "email": user.email,
+            "email_verified": user.email_verified,
+            "bvn": user.bvn,
+            "avatar": user.profile_image(),
+            "wallet_id": user.wallet.id,
+            "wallet_balance": user.wallet.balance,
+            "wallet_account_number": user.wallet.account_number,
+            "wallet_bank_name": user.wallet.bank_name,
+        }
         return {
             "tokens": user.tokens(),
             "data": {
-                "user_id": user.id,
-                "profile": profile_serializer,
+                "business_owner": data,
             }
         }
