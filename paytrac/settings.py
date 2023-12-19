@@ -23,7 +23,7 @@ SECRET_KEY = config("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['7161-102-88-37-103.ngrok-free.app', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = []
 
 # Application definition
 DJANGO_APPS = [
@@ -106,7 +106,8 @@ CORS_ALLOW_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "PAYTRAC API",
-    "DESCRIPTION": """""",
+    "DESCRIPTION": """Streamline payment processes, manage client profiles, track transactions, and receive real-time alerts for unpaid
+invoices with our Small Business Payment Platform - PayTrac.""",
     "VERSION": "1.0.0",
     "CONTACT": "lookouttest91@zohomail.com",
     "SCHEMA_PATH_PREFIX": r'/api/v[0-9]',

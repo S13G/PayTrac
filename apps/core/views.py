@@ -249,6 +249,12 @@ class LoginView(TokenObtainPairView):
             'Authorization': f"Bearer {settings.FW_SECRET_KEY}"
         }
 
+        try:
+            Wallet.objects.get(business_owner=user)
+        except Wallet.DoesNotExist:
+            raise RequestError(err_code=ErrorCode.NON_EXISTENT, err_msg="Wallet not found",
+                               status_code=status.HTTP_404_NOT_FOUND)
+
         order_ref = user.wallet.order_ref
 
         url = f"https://api.flutterwave.com/v3/virtual-account-numbers/{order_ref}"
@@ -259,8 +265,11 @@ class LoginView(TokenObtainPairView):
         except Exception as e:
             raise RequestError(err_code=ErrorCode.FAILED, err_msg=str(e), status_code=status.HTTP_400_BAD_REQUEST)
 
-        user.wallet.balance = response_data.get('amount')
-        user.wallet.save()
+        if user.wallet.balance == response_data.get('amount'):
+            pass
+        else:
+            user.wallet.balance = response_data.get('amount')
+            user.wallet.save()
 
         token_response = super().post(request)
         tokens = token_response.data
